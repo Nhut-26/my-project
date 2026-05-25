@@ -1,0 +1,165 @@
+/* Reset & Cài đặt Font chữ đồng bộ hệ thống */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { 
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+  background-color: #ffffff; 
+  color: #2d3748; 
+}
+button { cursor: pointer; border: none; background: none; font-family: inherit; }
+
+/* Thanh màu xanh Teal đậm chạy ngang nóc website */
+.top-accent-bar {
+  height: 12px;
+  background-color: #008577; /* Màu xanh chuẩn cổng UTH */
+  width: 100%;
+}
+
+.app-container { 
+  width: 100%; 
+  max-width: 100%;    
+  padding: 0 4%;      
+  margin: 0; 
+}
+
+/* HEADER */
+.header { display: flex; justify-content: space-between; align-items: center; padding: 18px 0; border-bottom: 1px solid #edf2f7; }
+.logo { display: flex; align-items: center; cursor: pointer; }
+.logo-img {
+    height: 45px;
+    width: auto;
+    object-fit: contain;
+}
+.divider { width: 2px; height: 26px; background-color: #ff7f50; margin: 0 15px; }
+.logo-text { font-size: 18px; font-weight: 700; color: #1a202c; }
+
+.nav-menu { display: flex; gap: 24px; align-items: center; font-weight: 500; color: #4a5568; font-size: 15px; }
+.nav-menu button { display: flex; align-items: center; gap: 4px; color: #4a5568; transition: color 0.2s; }
+.nav-menu button:hover { color: #008577; }
+.active-nav { color: #008577 !important; font-weight: 700; }
+
+/* Nút vuông bo góc màu xanh đặc trưng */
+.teal-square-btn {
+  background-color: #008577;
+  color: white !important;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+.teal-square-btn:hover { background-color: #006c61; }
+
+/* Profile góc phải */
+.user-profile { display: flex; align-items: center; gap: 8px; color: #4a5568; font-size: 14px; }
+.avatar-circle {
+  width: 34px;
+  height: 34px;
+  background-color: #e2e8f0;
+  color: #4a5568;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* SEARCH BAR */
+.search-section { display: flex; justify-content: center; margin-top: 25px; }
+.search-box { position: relative; width: 100%; max-width: 550px; }
+.search-box input { 
+  width: 100%; 
+  padding: 11px 20px; 
+  border: 1px solid #e2e8f0; 
+  border-radius: 30px; 
+  outline: none; 
+  font-size: 14px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+.search-box input:focus { border-color: #008577; }
+.search-icon { position: absolute; right: 18px; top: 12px; color: #a0aec0; }
+
+/* BANNER THEO MẪU MỚI (XANH BẠC HÀ NHẠT) */
+.banner { 
+  background: linear-gradient(135deg, #dbede9 0%, #eef6f4 100%); /* Nền xanh mint cực dịu */
+  text-align: center; 
+  padding: 50px 20px; 
+  border-radius: 4px; 
+  margin-top: 25px; 
+  position: relative;
+  overflow: hidden;
+}
+.banner h1 { 
+  color: #201e43; /* Màu chữ xanh tím than rất tối */
+  font-size: 34px; 
+  font-weight: 700;
+  margin-bottom: 12px; 
+  position: relative;
+  z-index: 2;
+}
+
+/* Các chấm tròn mờ trang trí */
+.dot { position: absolute; border-radius: 50%; opacity: 0.6; pointer-events: none; }
+.dot-1 { width: 14px; height: 14px; background-color: #718096; left: 20%; top: 30%; }
+.dot-2 { width: 20px; height: 20px; background-color: #f56565; left: 33%; bottom: 25%; }
+.dot-3 { width: 10px; height: 10px; background-color: #f56565; right: 28%; bottom: 35%; }
+
+
+/* CATEGORY TABS */
+.category-tabs { display: flex; justify-content: center; gap: 8px; margin-top: 25px; flex-wrap: wrap; }
+.category-tabs button { 
+  padding: 7px 16px; 
+  border-radius: 20px; 
+  background-color: #f7fafc; 
+  color: #4a5568; 
+  font-weight: 600; 
+  font-size: 13px; 
+  border: 1px solid #e2e8f0;
+}
+.category-tabs button:hover { background-color: #edf2f7; }
+.category-tabs .active-tab { 
+  background-color: #008577 !important; 
+  color: white !important; 
+  border-color: #008577 !important;
+  box-shadow: 0 4px 6px rgba(0, 133, 119, 0.15);
+}
+
+/* BOOK GRID */
+.main-content { margin-top: 35px; margin-bottom: 60px; }
+.main-content h2 { color: #008577; font-size: 18px; font-weight: 700; margin-bottom: 20px; border-left: 4px solid #008577; padding-left: 10px; }
+.book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 20px; }
+.book-card { border: 1px solid #edf2f7; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; background: white; }
+.book-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.06); }
+.book-cover { position: relative; height: 180px; background-color: #f7fafc; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+.book-cover img { width: 100%; height: 100%; object-fit: cover; }
+
+.badge { position: absolute; top: 8px; right: 8px; padding: 3px 6px; font-size: 9px; font-weight: 700; color: white; border-radius: 3px; text-transform: uppercase; }
+.badge-ebook { background-color: #0284c7; }
+.badge-physical { background-color: #b45309; }
+
+.book-info { padding: 14px; display: flex; flex-direction: column; flex-grow: 1; }
+.book-info h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; color: #1a202c; line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; height: 40px; }
+.author { font-size: 12px; color: #718096; margin-bottom: 12px; }
+
+.action-buttons { margin-top: auto; padding-top: 10px; }
+.btn-read, .btn-borrow { 
+  width: 100%; 
+  padding: 8px; 
+  font-weight: 700; 
+  font-size: 12px; 
+  border-radius: 6px; 
+  text-align: center;
+  border: 1px solid transparent;
+}
+.btn-read { background-color: #e0f2fe; color: #0369a1; }
+.btn-read:hover { background-color: #bae6fd; }
+.btn-borrow { background-color: #e6f4f2; color: #008577; }
+.btn-borrow:hover { background-color: #cceae4; }
+
+.borrowed-status { display: flex; flex-direction: column; gap: 6px; }
+.status-badge { background-color: #fff5f5; color: #e53e3e; padding: 6px; text-align: center; border-radius: 6px; font-size: 12px; font-weight: 600; }
+.btn-return { background-color: #2d3748; color: white; padding: 6px; border-radius: 6px; font-weight: 600; font-size: 12px; display: flex; justify-content: center; align-items: center; gap: 4px; }
+.btn-return:hover { background-color: #1a202c; }
+
+.inline-icon { display: inline-block; vertical-align: middle; margin-left: 2px; }
