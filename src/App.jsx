@@ -1,48 +1,123 @@
-import  { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, User, BookOpen, Book, RotateCcw, ChevronDown } from 'lucide-react';
 import uthLogo from './assets/logo.png';
 import './App.css'; 
+import { supabase } from './lib/supabase.js';
 
-const INITIAL_BOOKS = [
-  { id: 1, title: 'Tư Duy Nhanh Và Chậm', category: 'Kiến thức - Học thuật', type: 'physical', status: 'available', author: 'Daniel Kahneman', cover: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400' },
-  { id: 2, title: 'Bí Quyết Trắng Tay Thành Triệu Phú', category: 'Kiến thức - Học thuật', type: 'ebook', status: 'available', author: 'Carmine Gallo', cover: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400' },
-  { id: 3, title: 'Vũ Trụ Trong Vỏ Hạt Dẻ', category: 'Khoa học viễn tưởng', type: 'physical', status: 'borrowed', author: 'Stephen Hawking', cover: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=400' },
-  { id: 4, title: 'Hành Trình Về Phương Đông', category: 'Phiêu lưu', type: 'ebook', status: 'available', author: 'Baird T. Spalding', cover: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400' },
-];
 
-const CATEGORIES = ['Khoa học viễn tưởng', 'Kiến thức - Học thuật', 'Phiêu lưu', 'Tâm Lý – Kỹ Năng Sống'];
+
 
 export default function App() {
-  const [books, setBooks] = useState(INITIAL_BOOKS);
-  const [selectedCategory, setSelectedCategory] = useState('Kiến thức - Học thuật');
+  const [books, setBooks] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('all');
 
-  const handleBorrow = (id) => {
-    setBooks(prev => prev.map(book => {
-      if (book.id === id) {
-        if (book.type === 'ebook') {
-          alert(`🎉 Đã mở Ebook "${book.title}"!`);
-          return book;
-        } else {
-          return { ...book, status: 'borrowed' };
-        }
+  useEffect(() => {
+    loadData();
+  }, []);
+  async function loadData() {
+    const { data: categoryData, error: categoryError } =
+      await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+
+    if (categoryError) {
+      console.error(categoryError);
+      return;
+    }
+
+    setCategories(categoryData);
+
+    if (categoryData.length > 0) {
+      setSelectedCategory(categoryData[0].name);
+    }
+
+    const { data: bookData, error: bookError } =
+      await supabase
+        .from('books')
+        .select(`
+          *,
+          categories(name)
+        `);
+
+    if (bookError) {
+      console.error(bookError);
+      return;
+    }
+
+    setBooks(bookData);
+  };
+
+    const handleBorrow = async (id) => {
+      const book = books.find(
+        b => b.id === id
+      );
+
+      if (!book) return;
+
+      if (books.type === 'ebook') {
+        alert(`Đã mở Ebook "${books.title}"`);
+        return;
       }
-      return book;
-    }));
-  };
 
-  const handleReturn = (id) => {
-    setBooks(prev => prev.map(book => book.id === id ? { ...book, status: 'available' } : book));
-    alert('📥 Trả sách thành công!');
-  };
+      const { error } = await supabase
+        .from('books')
+        .update({
+          status: 'borrowed'
+        })
+        .eq('id', id);
 
-  const filteredBooks = books.filter(book => {
-    const matchesCategory = viewMode === 'borrowed' ? true : book.category === selectedCategory;
-    const matchesSearch = book.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesBorrowedView = viewMode === 'borrowed' ? book.status === 'borrowed' : true;
-    return matchesCategory && matchesSearch && matchesBorrowedView;
-  });
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      loadData();
+    };
+
+    const handleReturn = async (id) => {
+      const { error } = await supabase
+        .from('books')
+        .update({
+          status: 'available'
+        })
+        .eq('id', id);
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      loadData();
+
+      alert('📥 Trả sách thành công!');
+    };
+
+    const filteredBooks = books.filter(book => {
+      const matchesCategory =
+        viewMode === 'borrowed'
+          ? true
+          : book.categories?.name === selectedCategory;
+
+      const matchesSearch =
+        book.title.toLowerCase()
+          .includes(searchQuery.toLowerCase());
+
+      const matchesBorrowedView =
+        viewMode === 'borrowed'
+          ? book.status === 'borrowed'
+          : true;
+
+      return (
+        matchesCategory &&
+        matchesSearch &&
+        matchesBorrowedView
+      );
+    });
 
   return (
     <div className="wrapper">
@@ -106,13 +181,17 @@ export default function App() {
         {/* CATEGORY TABS */}
         {viewMode === 'all' && (
           <div className="category-tabs">
-            {CATEGORIES.map(cat => (
-              <button 
-                key={cat} 
-                onClick={() => setSelectedCategory(cat)}
-                className={selectedCategory === cat ? 'active-tab' : ''}
+            {categories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.name)}
+                className={
+                  selectedCategory === cat.name
+                    ? 'active-tab'
+                    : ''
+                }
               >
-                {cat}
+                {cat.name}
               </button>
             ))}
           </div>
@@ -123,32 +202,34 @@ export default function App() {
           <h2>{viewMode === 'all' ? `Chuyên mục: ${selectedCategory}` : '📚 Danh sách sách đang giữ'}</h2>
           
           <div className="book-grid">
-            {filteredBooks.map(book => (
-              <div key={book.id} className="book-card">
+            {filteredBooks.map(books => (
+              <div key={books.id} className="book-card">
                 <div className="book-cover">
-                  <img src={book.cover} alt={book.title} />
-                  <span className={`badge ${book.type === 'ebook' ? 'badge-ebook' : 'badge-physical'}`}>
-                    {book.type === 'ebook' ? 'Ebook' : 'Sách giấy'}
+                  <img src={books.cover} alt={books.title} />
+                  <span className={`badge ${books.type === 'ebook' ? 'badge-ebook' : 'badge-physical'}`}>
+                    {books.type === 'ebook' ? 'Ebook' : 'Sách giấy'}
                   </span>
                 </div>
                 <div className="book-info">
-                  <h3>{book.title}</h3>
-                  <p className="author">Tác giả: {book.author}</p>
+                  <h3 title={books.title}>
+                    {books.title}
+                  </h3>
+                  <p className="author">Tác giả: {books.author}</p>
                   
                   <div className="action-buttons">
-                    {book.type === 'ebook' ? (
-                      <button onClick={() => handleBorrow(book.id)} className="btn-read">
+                    {books.type === 'ebook' ? (
+                      <button onClick={() => handleBorrow(books.id)} className="btn-read">
                         <BookOpen size={14} className="inline-icon" /> Đọc trực tuyến
                       </button>
-                    ) : book.status === 'available' ? (
-                      <button onClick={() => handleBorrow(book.id)} className="btn-borrow">
+                    ) : books.status === 'available' ? (
+                      <button onClick={() => handleBorrow(books.id)} className="btn-borrow">
                         <Book size={14} className="inline-icon" /> Mượn sách giấy
                       </button>
                     ) : (
                       <div className="borrowed-status">
                         <span className="status-badge">Đã hết sách</span>
                         {viewMode === 'borrowed' && (
-                          <button onClick={() => handleReturn(book.id)} className="btn-return">
+                          <button onClick={() => handleReturn(books.id)} className="btn-return">
                             <RotateCcw size={12} /> Hoàn trả sách
                           </button>
                         )}

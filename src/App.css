@@ -139,7 +139,16 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 .badge-physical { background-color: #b45309; }
 
 .book-info { padding: 14px; display: flex; flex-direction: column; flex-grow: 1; }
-.book-info h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; color: #1a202c; line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; height: 40px; }
+.book-info h3 {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #1a202c;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .author { font-size: 12px; color: #718096; margin-bottom: 12px; }
 
 .action-buttons { margin-top: auto; padding-top: 10px; }
