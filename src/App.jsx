@@ -3,6 +3,7 @@ import { Search, User, BookOpen, Book, RotateCcw, ChevronDown } from 'lucide-rea
 import uthLogo from './assets/logo.png';
 import './App.css'; 
 import { supabase } from './lib/supabase.js';
+import Auth from "./Auth";
 
 
 
@@ -11,13 +12,13 @@ export default function App() {
   const [books, setBooks] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
-
+  const [showDocumentMenu, setShowDocumentMenu] = useState(false);
+  const [documentType, setDocumentType] = useState("all");
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('all');
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
   async function loadData() {
     const { data: categoryData, error: categoryError } =
       await supabase
@@ -52,15 +53,81 @@ export default function App() {
     setBooks(bookData);
   };
 
+  useEffect(() => {
+    (async () => {
+      await loadData();
+    })();
+  }, []);
+  useEffect(() => {
+        async function getUser() {
+
+            const {
+                data: { user }
+            } = await supabase.auth.getUser();
+
+            setUser(user);
+
+            if (user) {
+
+                const { data } = await supabase
+                    .from("profiles")
+                    .select("*")
+                    .eq("id", user.id)
+                    .single();
+
+                setProfile(data);
+            }
+
+        }
+
+        getUser();
+
+        const {
+            data: { subscription }
+        } = supabase.auth.onAuthStateChange(async (event, session) => {
+
+            const currentUser = session?.user ?? null;
+
+            setUser(currentUser);
+
+            if (currentUser) {
+
+                const { data } = await supabase
+                    .from("profiles")
+                    .select("*")
+                    .eq("id", currentUser.id)
+                    .single();
+
+                setProfile(data);
+
+            } else {
+
+                setProfile(null);
+
+            }
+
+        });
+
+        return () => subscription.unsubscribe();
+
+    }, []);
+
     const handleBorrow = async (id) => {
+      if (!user) {
+
+          alert("Bạn cần đăng nhập.");
+
+          return;
+
+      }
       const book = books.find(
         b => b.id === id
       );
 
       if (!book) return;
 
-      if (books.type === 'ebook') {
-        alert(`Đã mở Ebook "${books.title}"`);
+      if (book.type === 'ebook') {
+        alert(`Đã mở Ebook "${book.title}"`);
         return;
       }
 
@@ -75,9 +142,18 @@ export default function App() {
         console.error(error);
         return;
       }
+      if (book.status === "borrowed") {
+          alert("Sách hiện đã hết hàng.");
+          return;
+      }
 
-      loadData();
-    };
+      setBooks(prev =>
+          prev.map(book =>
+              book.id === id
+                  ? { ...book, status: "borrowed" }
+                  : book
+          )
+      );}
 
     const handleReturn = async (id) => {
       const { error } = await supabase
@@ -92,10 +168,29 @@ export default function App() {
         return;
       }
 
-      loadData();
+      setBooks(prev =>
+        prev.map(book =>
+            book.id === id
+                ? { ...book, status: "borrowed" }
+                : book
+        )
+      );
 
       alert('📥 Trả sách thành công!');
     };
+    async function handleLogout() {
+                  
+        const { error } = await supabase.auth.signOut();
+
+        if (error) {
+            alert(error.message);
+            return;
+        }
+
+        setUser(null);
+        setProfile(null);
+
+    }                   
 
     const filteredBooks = books.filter(book => {
       const matchesCategory =
@@ -111,13 +206,23 @@ export default function App() {
         viewMode === 'borrowed'
           ? book.status === 'borrowed'
           : true;
+        const matchesType =
+          documentType === "all"
+            ? true
+            : book.type === documentType;
 
       return (
-        matchesCategory &&
-        matchesSearch &&
-        matchesBorrowedView
+          matchesCategory &&
+          matchesSearch &&
+          matchesBorrowedView &&
+          matchesType
       );
     });
+  if (!user) {
+
+      return <Auth />;
+
+  }
 
   return (
     <div className="wrapper">
@@ -133,9 +238,49 @@ export default function App() {
           </div>
 
           <nav className="nav-menu">
-            <button onClick={() => setViewMode('all')} className={viewMode === 'all' ? 'active-nav' : ''}>
-              Tài liệu <ChevronDown size={14} className="inline-icon" />
-            </button>
+            <div className="document-menu">
+              <button
+                  onClick={() => setShowDocumentMenu(!showDocumentMenu)}
+                  className={viewMode === "all" ? "active-nav" : ""}
+              >
+                  Tài liệu
+                  <ChevronDown size={14} className="inline-icon" />
+              </button>
+              {showDocumentMenu && (
+                  <div className="dropdown-menu">
+                      <button
+                          onClick={()=>{
+                              setDocumentType("all");
+                              setViewMode("all");
+                              setShowDocumentMenu(false);
+                          }}
+                      >
+                          Tất cả
+                      </button>
+
+                      <button
+                          onClick={()=>{
+                              setDocumentType("physical");
+                              setViewMode("all");
+                              setShowDocumentMenu(false);
+                          }}
+                      >
+                          Sách giấy
+                      </button>
+
+                      <button
+                          onClick={()=>{
+                              setDocumentType("ebook");
+                              setViewMode("all");
+                              setShowDocumentMenu(false);
+                          }}
+                      >
+                          Ebook
+                      </button>
+
+                  </div>
+              )}
+          </div>
             <button>Hướng dẫn</button>
             <button onClick={() => setViewMode('borrowed')} className={viewMode === 'borrowed' ? 'active-nav' : ''}>
               Sách đã mượn
@@ -146,16 +291,34 @@ export default function App() {
             </button>
 
             <div className="user-profile">
-              <div className="avatar-circle">
-                <User size={16} />
-              </div>
-              <span>Mnhut</span>
-              <ChevronDown size={14} />
+
+                <div className="avatar-circle">
+                    <User size={16} />
+                </div>
+
+                <div className="user-info">
+
+                    <span className="user-name">
+                        {profile?.fullname || user.email}
+                    </span>
+
+                    <small>
+                        {profile?.student_id}
+                    </small>
+
+                </div>
+
+                <button
+                    className="logout-btn"
+                    onClick={handleLogout}
+                >
+                    Đăng xuất
+                </button>
+
             </div>
           </nav>
         </header>
 
-        {/* SEARCH BAR */}
         <div className="search-section">
           <div className="search-box">
             <input 
