@@ -171,7 +171,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 }
 .btn-read { background-color: #e0f2fe; color: #0369a1; }
 .btn-read:hover { background-color: #bae6fd; }
-.btn-borrow { background-color: #e6f4f2; color: #008577; }
+.btn-borrow { background-color: #e6f4f2; color: #008577; text-align: center; }
 .btn-borrow:hover { background-color: #cceae4; }
 
 .borrowed-status { display: flex; flex-direction: column; gap: 6px; }
@@ -535,3 +535,107 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
     .auth-card{ width:100%; padding:38px 26px 32px; }
     .card-stamp{ right:20px; }
 }
+.wrapper { min-height: 100vh; }
+
+/* Profile avatar + its dropdown menu (Hồ sơ / Đăng xuất) */
+.profile-menu {
+  position: relative;
+}
+
+.dropdown {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  width: 150px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0,0,0,.15);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.dropdown button {
+  width: 100%;
+  padding: 10px 15px;
+  text-align: left;
+  background: white;
+  font-size: 13px;
+  color: #4a5568;
+}
+
+.dropdown button:hover {
+  background: #e6f4f2;
+}
+
+/* Borrow invoice modal */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  z-index: 2000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.modal-content {
+  background: white;
+  padding: 24px;
+  margin-top: 100px;
+  width: 320px;
+  border-radius: 10px;
+  box-shadow: 0 20px 40px rgba(0,0,0,.2);
+}
+
+.modal-content h3 {
+  color: #008577;
+  margin-bottom: 14px;
+}
+
+.modal-content p {
+  font-size: 14px;
+  margin-bottom: 6px;
+  color: #4a5568;
+}
+
+.modal-content label {
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.modal-content input[type="date"] {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.modal-content button {
+  padding: 9px 18px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  margin-right: 8px;
+}
+
+.btn-confirm {
+  background-color: #008577;
+  color: white;
+}
+.btn-confirm:hover { background-color: #006c61; }
+
+.btn-cancel {
+  background-color: #edf2f7;
+  color: #4a5568;
+}
+.btn-cancel:hover { background-color: #e2e8f0; }

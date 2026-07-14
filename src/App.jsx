@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Search, User, BookOpen, Book, RotateCcw, ChevronDown } from 'lucide-react';
+import { Search, BookOpen, RotateCcw, ChevronDown } from 'lucide-react';
 import uthLogo from './assets/logo.png';
 import './App.css'; 
 import { supabase } from './lib/supabase.js';
 import Auth from "./Auth";
+import { useNavigate } from "react-router-dom";
 
 
 
 
 export default function App() {
+  const navigate = useNavigate();
   const [books, setBooks] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -18,6 +20,10 @@ export default function App() {
   const [viewMode, setViewMode] = useState('all');
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [selectedBook, setSelectedBook] = useState(null);
+  const [returnDate, setReturnDate] = useState("");
+  const [showInvoice, setShowInvoice] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
   async function loadData() {
     const { data: categoryData, error: categoryError } =
@@ -58,166 +64,205 @@ export default function App() {
       await loadData();
     })();
   }, []);
+
+  // Single source of truth for auth state + profile (removed the duplicate
+  // getUser effect that used to run alongside this one).
   useEffect(() => {
-        async function getUser() {
-
-            const {
-                data: { user }
-            } = await supabase.auth.getUser();
-
-            setUser(user);
-
-            if (user) {
-
-                const { data } = await supabase
-                    .from("profiles")
-                    .select("*")
-                    .eq("id", user.id)
-                    .single();
-
-                setProfile(data);
-            }
-
-        }
-
-        getUser();
+    async function getUser() {
 
         const {
-            data: { subscription }
-        } = supabase.auth.onAuthStateChange(async (event, session) => {
+            data: { user }
+        } = await supabase.auth.getUser();
 
-            const currentUser = session?.user ?? null;
+        setUser(user);
 
-            setUser(currentUser);
+        if (user) {
 
-            if (currentUser) {
+            const { data } = await supabase
+                .from("profiles")
+                .select("*")
+                .eq("id", user.id)
+                .single();
 
-                const { data } = await supabase
-                    .from("profiles")
-                    .select("*")
-                    .eq("id", currentUser.id)
-                    .single();
-
-                setProfile(data);
-
-            } else {
-
-                setProfile(null);
-
-            }
-
-        });
-
-        return () => subscription.unsubscribe();
-
-    }, []);
-
-    const handleBorrow = async (id) => {
-      if (!user) {
-
-          alert("Bạn cần đăng nhập.");
-
-          return;
-
-      }
-      const book = books.find(
-        b => b.id === id
-      );
-
-      if (!book) return;
-
-      if (book.type === 'ebook') {
-        alert(`Đã mở Ebook "${book.title}"`);
-        return;
-      }
-
-      const { error } = await supabase
-        .from('books')
-        .update({
-          status: 'borrowed'
-        })
-        .eq('id', id);
-
-      if (error) {
-        console.error(error);
-        return;
-      }
-      if (book.status === "borrowed") {
-          alert("Sách hiện đã hết hàng.");
-          return;
-      }
-
-      setBooks(prev =>
-          prev.map(book =>
-              book.id === id
-                  ? { ...book, status: "borrowed" }
-                  : book
-          )
-      );}
-
-    const handleReturn = async (id) => {
-      const { error } = await supabase
-        .from('books')
-        .update({
-          status: 'available'
-        })
-        .eq('id', id);
-
-      if (error) {
-        console.error(error);
-        return;
-      }
-
-      setBooks(prev =>
-        prev.map(book =>
-            book.id === id
-                ? { ...book, status: "borrowed" }
-                : book
-        )
-      );
-
-      alert('📥 Trả sách thành công!');
-    };
-    async function handleLogout() {
-                  
-        const { error } = await supabase.auth.signOut();
-
-        if (error) {
-            alert(error.message);
-            return;
+            setProfile(data);
         }
 
-        setUser(null);
-        setProfile(null);
+    }
 
-    }                   
+    getUser();
 
-    const filteredBooks = books.filter(book => {
-      const matchesCategory =
-        viewMode === 'borrowed'
-          ? true
-          : book.categories?.name === selectedCategory;
+    const {
+        data: { subscription }
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
 
-      const matchesSearch =
-        book.title.toLowerCase()
-          .includes(searchQuery.toLowerCase());
+        const currentUser = session?.user ?? null;
 
-      const matchesBorrowedView =
-        viewMode === 'borrowed'
-          ? book.status === 'borrowed'
-          : true;
-        const matchesType =
-          documentType === "all"
-            ? true
-            : book.type === documentType;
+        setUser(currentUser);
 
-      return (
-          matchesCategory &&
-          matchesSearch &&
-          matchesBorrowedView &&
-          matchesType
-      );
+        if (currentUser) {
+
+            const { data } = await supabase
+                .from("profiles")
+                .select("*")
+                .eq("id", currentUser.id)
+                .single();
+
+            setProfile(data);
+
+        } else {
+
+            setProfile(null);
+
+        }
+
     });
+
+    return () => subscription.unsubscribe();
+
+  }, []);
+
+  // Handles both ebooks (opens reader) and physical books (opens the
+  // borrow invoice modal), with the login/availability checks that used
+  // to be skipped for physical books.
+  const handleBorrow = async (id) => {
+    if (!user) {
+
+        alert("Bạn cần đăng nhập.");
+
+        return;
+
+    }
+    const book = books.find(
+      b => b.id === id
+    );
+
+    if (!book) return;
+
+    if (book.type === 'ebook') {
+      alert(`Đã mở Ebook "${book.title}"`);
+      return;
+    }
+
+    if (book.status !== 'available') {
+        alert("Sách hiện đã hết hàng.");
+        return;
+    }
+
+    setSelectedBook(book);
+    setShowInvoice(true);
+  }
+
+  const handleReturn = async (id) => {
+    const { error } = await supabase
+      .from('books')
+      .update({
+        status: 'available'
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setBooks(prev =>
+      prev.map(book =>
+          book.id === id
+              ? { ...book, status: "available" }
+              : book
+      )
+    );
+
+    alert('📥 Trả sách thành công!');
+  };
+  async function handleLogout() {
+                
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+          alert(error.message);
+          return;
+      }
+
+      setUser(null);
+      setProfile(null);
+
+  }            
+
+
+  const filteredBooks = books.filter(book => {
+    const matchesCategory =
+      viewMode === 'borrowed'
+        ? true
+        : book.categories?.name === selectedCategory;
+
+    const matchesSearch =
+      book.title.toLowerCase()
+        .includes(searchQuery.toLowerCase());
+
+    const matchesBorrowedView =
+      viewMode === 'borrowed'
+        ? book.status === 'borrowed'
+        : true;
+      const matchesType =
+        documentType === "all"
+          ? true
+          : book.type === documentType;
+
+    return (
+        matchesCategory &&
+        matchesSearch &&
+        matchesBorrowedView &&
+        matchesType
+    );
+  });
+
+  const handleSubmitInvoice = async () => {
+    if (!returnDate) {
+      alert("Vui lòng chọn ngày trả");
+      return;
+    }
+
+    const { error: invoiceError } = await supabase.from("invoices").insert([
+      {
+        book_id: selectedBook.id,
+        user_id: user.id,
+        borrow_date: new Date(),
+        return_date: returnDate,
+      },
+    ]);
+
+    if (invoiceError) {
+      alert("Lỗi: " + invoiceError.message);
+      return;
+    }
+
+    // This used to be missing entirely, which meant a borrowed book never
+    // actually changed status in the database or in the UI.
+    const { error: updateError } = await supabase
+      .from('books')
+      .update({ status: 'borrowed' })
+      .eq('id', selectedBook.id);
+
+    if (updateError) {
+      alert("Lỗi cập nhật trạng thái sách: " + updateError.message);
+      return;
+    }
+
+    setBooks(prev =>
+      prev.map(book =>
+        book.id === selectedBook.id
+          ? { ...book, status: 'borrowed' }
+          : book
+      )
+    );
+
+    alert("Mượn sách thành công!");
+    setShowInvoice(false);
+    setReturnDate("");
+    setSelectedBook(null);
+  };
+
   if (!user) {
 
       return <Auth />;
@@ -292,8 +337,21 @@ export default function App() {
 
             <div className="user-profile">
 
-                <div className="avatar-circle">
-                    <User size={16} />
+                <div className="profile-menu">
+                  <div className="avatar-circle" onClick={() => setShowMenu(!showMenu)}>
+                      {(profile?.full_name || user.email || "?").charAt(0).toUpperCase()}
+                  </div>
+
+                  {showMenu && (
+                    <div className="dropdown">
+                      <button onClick={() => { setShowMenu(false); navigate("/profile"); }}>
+                        Hồ sơ
+                      </button>
+                      <button onClick={() => { setShowMenu(false); handleLogout(); }}>
+                        Đăng xuất
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="user-info">
@@ -307,13 +365,6 @@ export default function App() {
                     </small>
 
                 </div>
-
-                <button
-                    className="logout-btn"
-                    onClick={handleLogout}
-                >
-                    Đăng xuất
-                </button>
 
             </div>
           </nav>
@@ -365,34 +416,37 @@ export default function App() {
           <h2>{viewMode === 'all' ? `Chuyên mục: ${selectedCategory}` : '📚 Danh sách sách đang giữ'}</h2>
           
           <div className="book-grid">
-            {filteredBooks.map(books => (
-              <div key={books.id} className="book-card">
+            {filteredBooks.map(book => (
+              <div key={book.id} className="book-card">
                 <div className="book-cover">
-                  <img src={books.cover} alt={books.title} />
-                  <span className={`badge ${books.type === 'ebook' ? 'badge-ebook' : 'badge-physical'}`}>
-                    {books.type === 'ebook' ? 'Ebook' : 'Sách giấy'}
+                  <img src={book.cover} alt={book.title} />
+                  <span className={`badge ${book.type === 'ebook' ? 'badge-ebook' : 'badge-physical'}`}>
+                    {book.type === 'ebook' ? 'Ebook' : 'Sách giấy'}
                   </span>
                 </div>
                 <div className="book-info">
-                  <h3 title={books.title}>
-                    {books.title}
+                  <h3 title={book.title}>
+                    {book.title}
                   </h3>
-                  <p className="author">Tác giả: {books.author}</p>
+                  <p className="author">Tác giả: {book.author}</p>
                   
                   <div className="action-buttons">
-                    {books.type === 'ebook' ? (
-                      <button onClick={() => handleBorrow(books.id)} className="btn-read">
+                    {book.type === 'ebook' ? (
+                      <button onClick={() => handleBorrow(book.id)} className="btn-read">
                         <BookOpen size={14} className="inline-icon" /> Đọc trực tuyến
                       </button>
-                    ) : books.status === 'available' ? (
-                      <button onClick={() => handleBorrow(books.id)} className="btn-borrow">
-                        <Book size={14} className="inline-icon" /> Mượn sách giấy
+                    ) : book.status === 'available' ? (
+                     <button
+                        onClick={() => handleBorrow(book.id)}
+                        className="btn-borrow"
+                      >
+                        Mượn
                       </button>
                     ) : (
                       <div className="borrowed-status">
                         <span className="status-badge">Đã hết sách</span>
                         {viewMode === 'borrowed' && (
-                          <button onClick={() => handleReturn(books.id)} className="btn-return">
+                          <button onClick={() => handleReturn(book.id)} className="btn-return">
                             <RotateCcw size={12} /> Hoàn trả sách
                           </button>
                         )}
@@ -405,6 +459,28 @@ export default function App() {
           </div>
         </main>
       </div>
+      {showInvoice && (
+        <div className="modal">
+          <div className="modal-content">
+            <h3>Hóa đơn mượn sách</h3>
+
+            <p><b>Sách:</b> {selectedBook?.title}</p>
+            <p><b>Người mượn:</b> {user?.email}</p>
+            <p><b>Ngày mượn:</b> {new Date().toLocaleDateString()}</p>
+
+            <label>Ngày trả:</label>
+            <input
+              type="date"
+              value={returnDate}
+              onChange={(e) => setReturnDate(e.target.value)}
+            />
+
+            <button className="btn-confirm" onClick={handleSubmitInvoice}>Xác nhận</button>
+            <button className="btn-cancel" onClick={() => setShowInvoice(false)}>Hủy</button>
+          </div>
+        </div>
+      )}
     </div>
-  );
+  )
+  ;
 }
