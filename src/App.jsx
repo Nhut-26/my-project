@@ -299,7 +299,7 @@ export default function App() {
                 <div className="user-info">
 
                     <span className="user-name">
-                        {profile?.fullname || user.email}
+                        {profile?.full_name || user.email}
                     </span>
 
                     <small>
