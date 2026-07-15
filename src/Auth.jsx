@@ -39,6 +39,11 @@ export default function Auth() {
 
     const [loading, setLoading] = useState(false);
 
+    const [showForgotPassword, setShowForgotPassword] = useState(false);
+    const [resetEmail, setResetEmail] = useState("");
+    const [resetLoading, setResetLoading] = useState(false);
+    const [resetSent, setResetSent] = useState(false);
+
     async function handleSubmit() {
 
         setLoading(true);
@@ -136,6 +141,41 @@ export default function Auth() {
         setConfirmPassword("");
     }
 
+    async function handleForgotPassword() {
+
+        if (!resetEmail) {
+            alert("Vui lòng nhập email của bạn.");
+            return;
+        }
+
+        setResetLoading(true);
+
+        const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+            redirectTo: window.location.origin,
+        });
+
+        setResetLoading(false);
+
+        if (error) {
+            alert(error.message);
+            return;
+        }
+
+        setResetSent(true);
+    }
+
+    function openForgotPassword() {
+        setResetEmail(email);
+        setResetSent(false);
+        setShowForgotPassword(true);
+    }
+
+    function closeForgotPassword() {
+        setShowForgotPassword(false);
+        setResetSent(false);
+        setResetEmail("");
+    }
+
     return (
 
         <div className="auth-page">
@@ -186,8 +226,68 @@ export default function Auth() {
                         <span>UTH</span>
                     </div>
 
-                    <div className="auth-card-eyebrow">Cổng truy cập</div>
+                    <div className="auth-card-eyebrow">
+                        {showForgotPassword ? "Khôi phục truy cập" : "Cổng truy cập"}
+                    </div>
 
+                    {showForgotPassword ? (
+                        <>
+                            <h2>Quên mật khẩu</h2>
+
+                            {resetSent ? (
+                                <>
+                                    <p className="auth-footnote" style={{ marginBottom: 22 }}>
+                                        Đã gửi liên kết đặt lại mật khẩu tới <b>{resetEmail}</b>.
+                                        Vui lòng kiểm tra hộp thư (kể cả mục spam) để tiếp tục.
+                                    </p>
+                                    <button
+                                        className="auth-btn"
+                                        onClick={closeForgotPassword}
+                                    >
+                                        Quay lại đăng nhập
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="auth-footnote" style={{ marginBottom: 22 }}>
+                                        Nhập email đã đăng ký, chúng tôi sẽ gửi cho bạn liên kết
+                                        để đặt lại mật khẩu.
+                                    </p>
+
+                                    <div className="field-group">
+                                        <label>Email</label>
+                                        <input
+                                            type="email"
+                                            placeholder="ban@sv.uth.edu.vn"
+                                            value={resetEmail}
+                                            onChange={(e) =>
+                                                setResetEmail(e.target.value)
+                                            }
+                                        />
+                                    </div>
+
+                                    <button
+                                        className="auth-btn"
+                                        onClick={handleForgotPassword}
+                                        disabled={resetLoading}
+                                    >
+                                        {resetLoading ? "Đang gửi..." : "Gửi liên kết đặt lại"}
+                                    </button>
+
+                                    <p className="auth-footnote">
+                                        <button
+                                            type="button"
+                                            className="forgot-password-link"
+                                            onClick={closeForgotPassword}
+                                        >
+                                            ← Quay lại đăng nhập
+                                        </button>
+                                    </p>
+                                </>
+                            )}
+                        </>
+                    ) : (
+                    <>
                     <h2>
                         {isLogin ? "Chào bạn trở lại" : "Tạo thẻ thư viện"}
                     </h2>
@@ -270,6 +370,19 @@ export default function Auth() {
                     </div>
 
                     {
+                        isLogin &&
+                        <div className="forgot-password-row">
+                            <button
+                                type="button"
+                                className="forgot-password-link"
+                                onClick={openForgotPassword}
+                            >
+                                Quên mật khẩu?
+                            </button>
+                        </div>
+                    }
+
+                    {
                         !isLogin &&
                         <div className="field-group">
                             <label>Nhập lại mật khẩu</label>
@@ -305,6 +418,8 @@ export default function Auth() {
                                 : "Đã có tài khoản? Chọn “Đăng nhập” ở trên."
                         }
                     </p>
+                    </>
+                    )}
 
                 </div>
 

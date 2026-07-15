@@ -19,10 +19,13 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [selectedBook, setSelectedBook] = useState(null);
+  const [borrowDate, setBorrowDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
   const [showInvoice, setShowInvoice] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const [pdfBook, setPdfBook] = useState(null);
 
   async function loadData() {
     const { data: categoryData, error: categoryError } =
@@ -138,11 +141,37 @@ export default function App() {
     if (!book) return;
 
     if (book.type === 'ebook') {
-      alert(`Đã mở Ebook "${book.title}"`);
+      if (!book.pdf_url) {
+        alert("Sách này chưa có file PDF.");
+        return;
+      }
+
+      // Ghi lại lượt đọc ebook vào bảng invoices để hiển thị trong
+      // "Sách đã mượn" ở trang hồ sơ (ebook không cần trả nên
+      // borrow_date và return_date lấy cùng ngày hôm đó).
+      const today = new Date().toISOString().split('T')[0];
+
+      const { error: invoiceError } = await supabase.from("invoices").insert([
+        {
+          book_id: book.id,
+          user_id: user.id,
+          borrow_date: today,
+          return_date: today,
+          status: "completed",
+        },
+      ]);
+
+      if (invoiceError) {
+        console.error(invoiceError);
+      }
+
+      setPdfBook(book);
+      setShowPdfViewer(true);
       return;
     }
 
     setSelectedBook(book);
+    setBorrowDate(new Date().toISOString().split('T')[0]);
     setShowInvoice(true);
   }
 
@@ -181,8 +210,18 @@ export default function App() {
   });
 
   const handleSubmitInvoice = async () => {
+    if (!borrowDate) {
+      alert("Vui lòng chọn ngày nhận sách");
+      return;
+    }
+
     if (!returnDate) {
       alert("Vui lòng chọn ngày trả");
+      return;
+    }
+
+    if (returnDate < borrowDate) {
+      alert("Ngày trả không được trước ngày nhận sách");
       return;
     }
 
@@ -190,8 +229,9 @@ export default function App() {
       {
         book_id: selectedBook.id,
         user_id: user.id,
-        borrow_date: new Date(),
+        borrow_date: borrowDate,
         return_date: returnDate,
+        status: "borrowed",
       },
     ]);
 
@@ -200,9 +240,17 @@ export default function App() {
       return;
     }
 
+    // Mượn sách chỉ trừ số lượng còn lại, KHÔNG đổi status trực tiếp.
+    // status của books chỉ chuyển sang "unavailable" khi quantity về 0.
+    const newQuantity = Math.max((selectedBook.quantity ?? 1) - 1, 0);
+    const bookUpdatePayload =
+      newQuantity === 0
+        ? { quantity: newQuantity, status: "unavailable" }
+        : { quantity: newQuantity };
+
     const { error: statusError } = await supabase
       .from("books")
-      .update({ status: "borrowed" })
+      .update(bookUpdatePayload)
       .eq("id", selectedBook.id);
 
     if (statusError) {
@@ -211,7 +259,7 @@ export default function App() {
       setBooks(prev =>
         prev.map(book =>
           book.id === selectedBook.id
-            ? { ...book, status: "borrowed" }
+            ? { ...book, ...bookUpdatePayload }
             : book
         )
       );
@@ -219,6 +267,7 @@ export default function App() {
 
     alert("Mượn sách thành công!");
     setShowInvoice(false);
+    setBorrowDate("");
     setReturnDate("");
     setSelectedBook(null);
   };
@@ -424,17 +473,70 @@ export default function App() {
 
             <p><b>Sách:</b> {selectedBook?.title}</p>
             <p><b>Người mượn:</b> {user?.email}</p>
-            <p><b>Ngày mượn:</b> {new Date().toLocaleDateString()}</p>
+
+            <label>Ngày nhận sách:</label>
+            <input
+              type="date"
+              value={borrowDate}
+              onChange={(e) => setBorrowDate(e.target.value)}
+            />
 
             <label>Ngày trả:</label>
             <input
               type="date"
+              min={borrowDate || undefined}
               value={returnDate}
               onChange={(e) => setReturnDate(e.target.value)}
             />
 
+            <div className="invoice-policy-note">
+              <b>Lưu ý quy định mượn sách:</b> Nếu quá hạn trả sách 1 ngày sẽ
+              phải thanh toán 50.000đ phí phạt, nếu không thanh toán sau 12
+              ngày sẽ phải thanh toán 100.000đ phí phạt. Còn nếu sau 30 ngày
+              không trả sách, hệ thống sẽ đóng tài khoản đến khi người dùng
+              trả sách và thanh toán 100.000đ phí phạt!
+            </div>
+
             <button className="btn-confirm" onClick={handleSubmitInvoice}>Xác nhận</button>
             <button className="btn-cancel" onClick={() => setShowInvoice(false)}>Hủy</button>
+          </div>
+        </div>
+      )}
+
+      {showPdfViewer && pdfBook && (
+        <div className="modal">
+          <div className="modal-content modal-content-pdf">
+            <h3 title={pdfBook.title}>{pdfBook.title}</h3>
+
+            <div className="pdf-preview">
+              <iframe
+                src={pdfBook.pdf_url}
+                title={pdfBook.title}
+                width="100%"
+                height="500px"
+              />
+            </div>
+
+            <div className="pdf-actions">
+              <a
+                href={pdfBook.pdf_url}
+                download={`${pdfBook.title}.pdf`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-confirm"
+              >
+                Tải về
+              </a>
+              <button
+                className="btn-cancel"
+                onClick={() => {
+                  setShowPdfViewer(false);
+                  setPdfBook(null);
+                }}
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
       )}

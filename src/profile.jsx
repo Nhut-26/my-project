@@ -87,7 +87,9 @@ export default function Profile({ user, profile, onBack, onLogout, onProfileUpda
               />
             )}
 
-            {activeSection === "borrowed" && <BorrowedBooks user={user} />}
+            {activeSection === "borrowed" && (
+              <BorrowedBooks user={user} profile={profile} />
+            )}
           </section>
         </div>
       </div>
@@ -324,13 +326,58 @@ function EditInfo({ user, profile, onProfileUpdated, onSaved }) {
 }
 
 /* ============================================================
+   Tính toán quá hạn + phí phạt dựa trên quy định thư viện:
+   - Quá hạn 1 ngày: phạt 50.000đ
+   - Không thanh toán sau 12 ngày kể từ ngày hết hạn: phạt tăng
+     lên 100.000đ
+   - Sau 30 ngày không trả sách: tài khoản có thể bị khóa, vẫn
+     phải trả sách + thanh toán 100.000đ
+   Chỉ áp dụng cho sách giấy đang trong trạng thái "borrowed"
+   (ebook không có hạn trả).
+   ============================================================ */
+function getOverdueInfo(invoice) {
+  if (!invoice.books || invoice.books.type === "ebook") return null;
+  if (invoice.status !== "borrowed") return null;
+  if (!invoice.return_date) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const dueDate = new Date(invoice.return_date);
+  dueDate.setHours(0, 0, 0, 0);
+
+  const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
+
+  if (daysOverdue <= 0) {
+    return { overdue: false, daysOverdue: 0, fine: 0, locked: false, tier: null };
+  }
+
+  const locked = daysOverdue >= 30;
+  const fine = daysOverdue >= 12 ? 100000 : 50000;
+  const tier =
+    daysOverdue >= 30
+      ? "Quá hạn trên 30 ngày"
+      : daysOverdue >= 12
+      ? "Quá hạn trên 12 ngày chưa thanh toán"
+      : "Quá hạn trả sách";
+
+  return { overdue: true, daysOverdue, fine, locked, tier };
+}
+
+function formatVND(amount) {
+  return amount.toLocaleString("vi-VN") + "đ";
+}
+
+/* ============================================================
    Sách đã mượn — lấy từ bảng invoices
    ============================================================ */
-function BorrowedBooks({ user }) {
+function BorrowedBooks({ user, profile }) {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [returningId, setReturningId] = useState(null);
+  const [payingId, setPayingId] = useState(null);
+  const [viewingInvoice, setViewingInvoice] = useState(null);
 
   useEffect(() => {
     let ignore = false;
@@ -366,7 +413,7 @@ function BorrowedBooks({ user }) {
 
       const { data: bookData, error: bookError } = await supabase
         .from("books")
-        .select("id, title, author, cover, type, status")
+        .select("id, title, author, cover, type, status, quantity")
         .in("id", bookIds);
 
       if (ignore) return;
@@ -399,27 +446,75 @@ function BorrowedBooks({ user }) {
 
     setReturningId(invoice.id);
 
-    const { error } = await supabase
+    // Trạng thái "đã trả" được lưu trên chính hóa đơn, không suy ra
+    // từ status của sách.
+    const { error: invoiceUpdateError } = await supabase
+      .from("invoices")
+      .update({ status: "returned" })
+      .eq("id", invoice.id);
+
+    if (invoiceUpdateError) {
+      setReturningId(null);
+      alert("Lỗi khi trả sách: " + invoiceUpdateError.message);
+      return;
+    }
+
+    // Trả sách chỉ cộng lại số lượng còn lại. status của books chỉ đổi
+    // về "available" khi quantity tăng trở lại > 0.
+    const newQuantity = (invoice.books.quantity ?? 0) + 1;
+
+    const { error: bookUpdateError } = await supabase
       .from("books")
-      .update({ status: "available" })
+      .update({ quantity: newQuantity, status: "available" })
       .eq("id", invoice.book_id);
 
     setReturningId(null);
 
-    if (error) {
-      alert("Lỗi khi trả sách: " + error.message);
-      return;
+    if (bookUpdateError) {
+      console.error(bookUpdateError);
     }
 
     setInvoices((prev) =>
       prev.map((inv) =>
         inv.id === invoice.id
-          ? { ...inv, books: { ...inv.books, status: "available" } }
+          ? {
+              ...inv,
+              status: "returned",
+              books: { ...inv.books, quantity: newQuantity, status: "available" },
+            }
           : inv
       )
     );
 
     alert("📥 Trả sách thành công!");
+  }
+
+  async function handlePayFine(invoice) {
+    setPayingId(invoice.id);
+
+    const { error } = await supabase
+      .from("invoices")
+      .update({ fine_paid: true })
+      .eq("id", invoice.id);
+
+    setPayingId(null);
+
+    if (error) {
+      alert("Lỗi khi thanh toán phí phạt: " + error.message);
+      return;
+    }
+
+    setInvoices((prev) =>
+      prev.map((inv) =>
+        inv.id === invoice.id ? { ...inv, fine_paid: true } : inv
+      )
+    );
+
+    setViewingInvoice((prev) =>
+      prev && prev.id === invoice.id ? { ...prev, fine_paid: true } : prev
+    );
+
+    alert("💳 Thanh toán phí phạt thành công!");
   }
 
   return (
@@ -444,51 +539,179 @@ function BorrowedBooks({ user }) {
 
       {!loading && !loadError && invoices.length > 0 && (
         <div className="profile-borrowed-list">
-          {invoices.map((inv) => (
-            <div key={inv.id} className="profile-borrowed-item">
-              <div className="profile-borrowed-cover">
-                {inv.books?.cover ? (
-                  <img src={inv.books.cover} alt={inv.books.title} />
-                ) : (
-                  <BookOpen size={18} />
-                )}
-              </div>
+          {invoices.map((inv) => {
+            const overdueInfo = getOverdueInfo(inv);
 
-              <div className="profile-borrowed-meta">
-                <h4>{inv.books?.title || "Sách không xác định"}</h4>
-                <p>Tác giả: {inv.books?.author || "—"}</p>
-              </div>
+            return (
+              <div key={inv.id} className="profile-borrowed-item">
+                <div className="profile-borrowed-cover">
+                  {inv.books?.cover ? (
+                    <img src={inv.books.cover} alt={inv.books.title} />
+                  ) : (
+                    <BookOpen size={18} />
+                  )}
+                </div>
 
-              <div className="profile-borrowed-dates">
-                <span>
-                  MƯỢN:{" "}
-                  {inv.borrow_date
-                    ? new Date(inv.borrow_date).toLocaleDateString("vi-VN")
-                    : "—"}
-                </span>
-                <span>
-                  TRẢ DK:{" "}
-                  {inv.return_date
-                    ? new Date(inv.return_date).toLocaleDateString("vi-VN")
-                    : "—"}
-                </span>
-              </div>
+                <div className="profile-borrowed-meta">
+                  <h4>{inv.books?.title || "Sách không xác định"}</h4>
+                  <p>Tác giả: {inv.books?.author || "—"}</p>
 
-              {inv.books?.type !== "ebook" &&
-                inv.books?.status === "borrowed" && (
+                  {overdueInfo?.overdue && (
+                    <span
+                      className={`overdue-badge ${
+                        inv.fine_paid ? "overdue-badge-paid" : ""
+                      }`}
+                    >
+                      Quá hạn {overdueInfo.daysOverdue} ngày ·{" "}
+                      {inv.fine_paid
+                        ? `Đã thanh toán ${formatVND(overdueInfo.fine)}`
+                        : `Phạt ${formatVND(overdueInfo.fine)}`}
+                    </span>
+                  )}
+                </div>
+
+                <div className="profile-borrowed-dates">
+                  <span>
+                    NHẬN:{" "}
+                    {inv.borrow_date
+                      ? new Date(inv.borrow_date).toLocaleDateString("vi-VN")
+                      : "—"}
+                  </span>
+                  <span>
+                    TRẢ DK:{" "}
+                    {inv.return_date
+                      ? new Date(inv.return_date).toLocaleDateString("vi-VN")
+                      : "—"}
+                  </span>
+                </div>
+
+                <div className="profile-borrowed-actions">
                   <button
-                    className="btn-return"
-                    onClick={() => handleReturn(inv)}
-                    disabled={returningId === inv.id}
+                    className="btn-invoice"
+                    onClick={() => setViewingInvoice(inv)}
                   >
-                    <RotateCcw size={12} />{" "}
-                    {returningId === inv.id ? "Đang xử lý..." : "Hoàn trả sách"}
+                    Xem hóa đơn
                   </button>
-                )}
-            </div>
-          ))}
+
+                  {inv.books?.type !== "ebook" &&
+                    inv.status === "borrowed" && (
+                      <button
+                        className="btn-return"
+                        onClick={() => handleReturn(inv)}
+                        disabled={returningId === inv.id}
+                      >
+                        <RotateCcw size={12} />{" "}
+                        {returningId === inv.id
+                          ? "Đang xử lý..."
+                          : "Hoàn trả sách"}
+                      </button>
+                    )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
+
+      {viewingInvoice && (
+        <InvoiceModal
+          invoice={viewingInvoice}
+          user={user}
+          profile={profile}
+          onClose={() => setViewingInvoice(null)}
+          onPayFine={handlePayFine}
+          paying={payingId === viewingInvoice.id}
+        />
+      )}
     </>
+  );
+}
+
+/* ============================================================
+   Modal xem chi tiết hóa đơn mượn sách + thanh toán phí phạt
+   ============================================================ */
+function InvoiceModal({ invoice, user, profile, onClose, onPayFine, paying }) {
+  const overdueInfo = getOverdueInfo(invoice);
+  const displayName = profile?.full_name || user?.email || "—";
+
+  return (
+    <div className="modal">
+      <div className="modal-content">
+        <h3>Hóa đơn mượn sách</h3>
+
+        <p>
+          <b>Sách:</b> {invoice.books?.title || "Sách không xác định"}
+        </p>
+        <p>
+          <b>Tác giả:</b> {invoice.books?.author || "—"}
+        </p>
+        <p>
+          <b>Người mượn:</b> {displayName}
+        </p>
+        <p>
+          <b>Email:</b> {user?.email}
+        </p>
+        <p>
+          <b>Ngày nhận sách:</b>{" "}
+          {invoice.borrow_date
+            ? new Date(invoice.borrow_date).toLocaleDateString("vi-VN")
+            : "—"}
+        </p>
+        <p>
+          <b>Ngày trả dự kiến:</b>{" "}
+          {invoice.return_date
+            ? new Date(invoice.return_date).toLocaleDateString("vi-VN")
+            : "—"}
+        </p>
+        <p>
+          <b>Tình trạng:</b>{" "}
+          {invoice.books?.type === "ebook"
+            ? "Ebook (đã đọc trực tuyến)"
+            : invoice.status === "borrowed"
+            ? "Đang mượn"
+            : "Đã trả"}
+        </p>
+
+        {overdueInfo?.overdue ? (
+          <div className="invoice-policy-note invoice-fine-note">
+            <b>{overdueInfo.tier}:</b> Quá hạn {overdueInfo.daysOverdue}{" "}
+            ngày. Phí phạt hiện tại:{" "}
+            <b>{formatVND(overdueInfo.fine)}</b>.
+            {overdueInfo.locked && (
+              <>
+                {" "}
+                Tài khoản có thể bị tạm khóa cho đến khi trả sách và thanh
+                toán đầy đủ phí phạt.
+              </>
+            )}
+            <br />
+            Trạng thái thanh toán:{" "}
+            <b>{invoice.fine_paid ? "Đã thanh toán" : "Chưa thanh toán"}</b>
+
+            {!invoice.fine_paid && (
+              <button
+                className="btn-confirm invoice-pay-btn"
+                onClick={() => onPayFine(invoice)}
+                disabled={paying}
+              >
+                {paying ? "Đang xử lý..." : `Thanh toán ${formatVND(overdueInfo.fine)}`}
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="invoice-policy-note">
+            Nếu quá hạn trả sách 1 ngày sẽ phải thanh toán 50.000đ phí phạt,
+            nếu không thanh toán sau 12 ngày sẽ phải thanh toán 100.000đ phí
+            phạt. Còn nếu sau 30 ngày không trả sách, hệ thống sẽ đóng tài
+            khoản đến khi người dùng trả sách và thanh toán 100.000đ phí
+            phạt!
+          </div>
+        )}
+
+        <button className="btn-cancel" onClick={onClose}>
+          Đóng
+        </button>
+      </div>
+    </div>
   );
 }
