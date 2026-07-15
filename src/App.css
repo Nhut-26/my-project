@@ -215,7 +215,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
    Display: Fraunces (editorial serif) · Utility: IBM Plex Mono
    Body inputs keep the system sans already set on <body>.
    ============================================================ */
-.auth-page{
+:root{
     --ink:#1c2b28;
     --teal-deep:#013f38;
     --teal:#00695c;
@@ -224,7 +224,9 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
     --paper-line:#e4ddca;
     --brass:#a9791f;
     --stamp:#a3432a;
+}
 
+.auth-page{
     min-height:100vh;
     display:flex;
     background:var(--paper);
@@ -639,3 +641,380 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   color: #4a5568;
 }
 .btn-cancel:hover { background-color: #e2e8f0; }
+/* ============================================================
+   PROFILE PAGE (Hồ sơ) — nối tiếp hệ thống "Thẻ Thư Viện"
+   dùng ở trang đăng nhập: Fraunces + IBM Plex Mono, giấy/teal/brass.
+   ============================================================ */
+.profile-page {
+  min-height: 100vh;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      transparent 0px,
+      transparent 35px,
+      rgba(28,43,40,.035) 35px,
+      rgba(28,43,40,.035) 36px
+    ),
+    var(--paper);
+  padding: 44px 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.profile-shell {
+  width: 100%;
+  max-width: 980px;
+  background: var(--paper);
+  border: 1px solid var(--paper-line);
+  border-radius: 8px;
+  box-shadow: 0 30px 60px -20px rgba(1,63,56,.22);
+  overflow: hidden;
+  animation: fadeIn .5s ease both;
+}
+
+.profile-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 22px 34px;
+  border-bottom: 1px solid var(--paper-line);
+}
+
+.profile-topbar-title .profile-eyebrow {
+  display: block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--brass);
+  margin-bottom: 4px;
+}
+
+.profile-topbar h1 {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.profile-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  color: var(--teal);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  border: 1px solid var(--paper-line);
+  border-radius: 20px;
+  transition: .2s;
+}
+.profile-back-btn:hover { border-color: var(--teal); background: rgba(0,105,92,.06); }
+
+.profile-body {
+  display: flex;
+  align-items: stretch;
+}
+
+/* ---- Cột trái: thẻ định danh (avatar) + mục lục section ---- */
+.profile-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--paper-line);
+  padding: 36px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Khung ảnh kiểu con dấu cấp thẻ, hô ứng .card-stamp ở trang đăng nhập */
+.profile-avatar-frame {
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  border: 2px dashed var(--brass);
+  padding: 6px;
+  margin-bottom: 14px;
+}
+
+.profile-avatar-large {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: var(--teal-deep);
+  color: #eafaf6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Fraunces', serif;
+  font-size: 34px;
+  font-weight: 600;
+}
+
+.profile-name {
+  font-family: 'Fraunces', serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+  margin-bottom: 3px;
+}
+
+.profile-role {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 22px;
+  text-align: center;
+}
+
+.profile-edit-avatar-btn {
+  background: none;
+  color: var(--brass);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  border: 1px solid var(--brass);
+  border-radius: 20px;
+  margin-bottom: 28px;
+  transition: .2s;
+}
+.profile-edit-avatar-btn:hover { background: var(--brass); color: #fff; }
+
+.profile-section-nav {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Danh mục kiểu "mục lục" — cùng ngôn ngữ với .catalog-item ở trang đăng nhập */
+.profile-section-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 11px 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  color: #8a9490;
+  border-bottom: 1px solid var(--paper-line);
+  border-left: 2px solid transparent;
+}
+.profile-section-item:hover { color: var(--teal); }
+.profile-section-item.active-section {
+  color: var(--teal-deep);
+  border-left-color: var(--teal);
+  padding-left: 10px;
+}
+
+.profile-section-divider {
+  border: none;
+  border-top: 1px dashed var(--paper-line);
+  margin: 34px 0 30px;
+  max-width: 400px;
+}
+
+.profile-section-item.danger-section { color: var(--stamp); margin-top: 10px; border-bottom: none; }
+.profile-section-item.danger-section:hover { color: #7d2f1d; }
+
+/* ---- Cột phải: nội dung của section đang chọn ---- */
+.profile-content {
+  flex: 1;
+  padding: 40px 44px;
+}
+
+.profile-content-eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--brass);
+  margin-bottom: 8px;
+}
+
+.profile-content h2 {
+  font-family: 'Fraunces', serif;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.profile-content-subtitle {
+  font-size: 13.5px;
+  color: #6b7d78;
+  margin-bottom: 30px;
+}
+
+.profile-info-list {
+  max-width: 480px;
+  border-top: 1px solid var(--paper-line);
+}
+
+.profile-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--paper-line);
+  font-size: 14px;
+}
+
+.profile-info-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #8a9490;
+}
+.profile-info-value { color: var(--ink); font-weight: 600; text-align: right; }
+
+.profile-edit-form { max-width: 400px; }
+.profile-edit-form .auth-btn { width: auto; padding: 13px 30px; margin-top: 10px; }
+
+.field-hint {
+  display: block;
+  font-size: 11.5px;
+  color: #a3ada8;
+  margin-top: 6px;
+}
+
+/* Ruled underline inputs, giống hệt form ở trang đăng nhập */
+.profile-content .field-group input{
+    width:100%;
+    padding:10px 2px 11px;
+    border:none;
+    border-bottom:1.5px solid var(--paper-line);
+    border-radius:0;
+    background:transparent;
+    font-size:15px;
+    color:var(--ink);
+    transition:.2s;
+}
+.profile-content .field-group input::placeholder{ color:#b7bfba; }
+.profile-content .field-group input:focus{
+    outline:none;
+    border-bottom-color:var(--teal);
+}
+.profile-content .field-group input:disabled{
+    color:#a3ada8;
+    cursor:not-allowed;
+}
+
+.profile-empty-state {
+  max-width: 480px;
+  text-align: center;
+  padding: 46px 20px;
+  color: #a3ada8;
+  font-size: 13.5px;
+  border: 1px dashed var(--paper-line);
+  border-radius: 6px;
+}
+
+/* Danh sách mượn kiểu "phiếu mượn sách" — ngày tháng canh mono như một con dấu ngày */
+.profile-borrowed-list {
+  max-width: 640px;
+  border-top: 1px solid var(--paper-line);
+}
+
+.profile-borrowed-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px dashed var(--paper-line);
+}
+
+.profile-borrowed-cover {
+  width: 40px;
+  height: 54px;
+  flex-shrink: 0;
+  border-radius: 3px;
+  background: #eef0e8;
+  color: #a3ada8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.profile-borrowed-cover img { width: 100%; height: 100%; object-fit: cover; }
+
+.profile-borrowed-meta { flex: 1; min-width: 0; }
+.profile-borrowed-meta h4 {
+  font-family: 'Fraunces', serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-borrowed-meta p { font-size: 12px; color: #8a9490; }
+
+.profile-borrowed-dates {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10.5px;
+  letter-spacing: .3px;
+  color: #6b7d78;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.profile-borrowed-item .btn-return {
+  flex-shrink: 0;
+  padding: 8px 12px;
+}
+.profile-borrowed-item .btn-return:disabled { opacity: .6; cursor: default; }
+
+@media (max-width: 720px) {
+  .profile-page { padding: 0; }
+  .profile-shell { border-radius: 0; border: none; box-shadow: none; }
+  .profile-body { flex-direction: column; }
+  .profile-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--paper-line);
+  }
+  .profile-content { padding: 28px 22px; }
+}
+
+/* ============================================================
+   FORGOT PASSWORD LINK (Auth screen)
+   ============================================================ */
+.forgot-password-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -10px;
+  margin-bottom: 18px;
+}
+
+.forgot-password-link {
+  background: none;
+  color: #008577;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.forgot-password-link:hover { text-decoration: underline; }
