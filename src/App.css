@@ -84,6 +84,8 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   outline: none; 
   font-size: 14px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  background-color: #f0f8ff; /* Đổi màu nền của ô nhập liệu (ví dụ: màu xanh nhạt) */
+  color: #333333;
 }
 .search-box input:focus { border-color: #008577; }
 .search-icon { position: absolute; right: 18px; top: 12px; color: #a0aec0; }
@@ -240,7 +242,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
     display:flex;
     flex-direction:column;
     justify-content:center;
-    align-items:flex-start;
+    align-items:center;
     padding:80px 90px;
     color:#eafaf6;
     background:
@@ -251,9 +253,9 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 .auth-logo-wrap{
     position:absolute;
     top:36px;
-    right:36px;
+    left:36px;
     display:inline-flex;
-    align-items:center;
+    align-items:left;
     justify-content:center;
     background:rgba(255,255,255,.96);
     padding:20px 26px;
@@ -273,7 +275,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 }
 .library-title h1{
     font-family:'Fraunces', serif;
-    font-size:46px;
+    font-size:67px;
     font-weight:600;
     letter-spacing:0.5px;
     line-height:1.05;
@@ -305,6 +307,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
     width:100%;
     max-width:380px;
     z-index:2;
+    
 }
 .catalog-item{
     display:flex;
@@ -333,6 +336,25 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
     letter-spacing:.4px;
     color:#a9e8dc;
     white-space:nowrap;
+}
+
+
+.auth-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Căn giữa các khối (Tiêu đề, p, feature-list) */
+    text-align: center;  /* Căn giữa phần chữ bên trong */
+    width: 100%;
+    z-index: 2;          /* Đảm bảo nổi lên trên phần nền */
+}
+
+/* Tùy chỉnh thêm chút xíu cho thẻ p bên trong auth-center để chữ không bị tràn */
+.auth-center p {
+    max-width: 360px;
+    margin-top: 18px;
+    font-size: 15.5px;
+    line-height: 1.6;
+    color: #c9ece4;
 }
 
 /* Decorative shelf of book spines along the base of the panel — the signature motif */
@@ -588,7 +610,8 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   background: white;
   padding: 24px;
   margin-top: 100px;
-  width: 320px;
+  width: 450px;
+  height: 600px;
   border-radius: 10px;
   box-shadow: 0 20px 40px rgba(0,0,0,.2);
 }
@@ -644,8 +667,9 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 /* PDF viewer modal */
 .modal-content-pdf {
   width: 90%;
-  max-width: 800px;
-  margin-top: 40px;
+  height: 700px;
+  max-width: 1100px;
+  margin-top: 90px;
 }
 
 .pdf-preview {
@@ -695,7 +719,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
       rgba(28,43,40,.035) 35px,
       rgba(28,43,40,.035) 36px
     ),
-    var(--paper);
+    white(--paper);
   padding: 44px 24px;
   display: flex;
   justify-content: center;
@@ -704,7 +728,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 .profile-shell {
   width: 100%;
   max-width: 980px;
-  background: var(--paper);
+  background: white(--paper);
   border: 1px solid var(--paper-line);
   border-radius: 8px;
   box-shadow: 0 30px 60px -20px rgba(1,63,56,.22);

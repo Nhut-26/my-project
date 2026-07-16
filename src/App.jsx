@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Search, BookOpen, ChevronDown } from 'lucide-react';
-import uthLogo from './assets/logo.png';
+import uthLogo from './assets/logo_spinner.png';
 import './App.css'; 
 import { supabase } from './lib/supabase.js';
 import Auth from "./Auth";
 import Profile from "./Profile";
-
 
 
 
@@ -42,7 +41,7 @@ export default function App() {
     setCategories(categoryData);
 
     if (categoryData.length > 0) {
-      setSelectedCategory(categoryData[0].name);
+      setSelectedCategory("all");;
     }
 
     const { data: bookData, error: bookError } =
@@ -190,8 +189,13 @@ export default function App() {
   }            
 
 
-  const filteredBooks = books.filter(book => {
-    const matchesCategory = book.categories?.name === selectedCategory;
+const filteredBooks = books.filter(book => {
+    
+    // Đã gộp và xóa dòng khai báo trùng lặp
+    const matchesCategory =
+      selectedCategory === "all"
+        ? true
+        : book.categories?.name === selectedCategory;
 
     const matchesSearch =
       book.title.toLowerCase()
@@ -208,7 +212,7 @@ export default function App() {
         matchesType
     );
   });
-
+  
   const handleSubmitInvoice = async () => {
     if (!borrowDate) {
       alert("Vui lòng chọn ngày nhận sách");
@@ -408,6 +412,12 @@ export default function App() {
 
         {/* CATEGORY TABS */}
         <div className="category-tabs">
+          <button
+            onClick={() => setSelectedCategory("all")}
+            className={selectedCategory === "all" ? 'active-tab' : ''}
+          >
+            Tất cả
+          </button>
           {categories.map(cat => (
             <button
               key={cat.id}
@@ -506,7 +516,7 @@ export default function App() {
       {showPdfViewer && pdfBook && (
         <div className="modal">
           <div className="modal-content modal-content-pdf">
-            <h3 title={pdfBook.title}>{pdfBook.title}</h3>
+            <h3 title={pdfBook.title}>Preview: {pdfBook.title}</h3>
 
             <div className="pdf-preview">
               <iframe
@@ -524,9 +534,15 @@ export default function App() {
                 target="_blank"
                 rel="noreferrer"
                 className="btn-confirm"
+                style={{
+                  borderRadius: "5px",
+                  padding: "4px"
+
+                 }}
               >
-                Tải về
+                Đọc sách
               </a>
+              <div style={{width:"7px" }}></div>
               <button
                 className="btn-cancel"
                 onClick={() => {

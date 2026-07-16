@@ -2,6 +2,7 @@ import { useState } from "react";
 import { supabase } from "./lib/supabase";
 import "./App.css";
 import logo from "./assets/logo.png";
+import { TextAlignCenter } from "lucide-react";
 
 const FEATURES = [
     { icon: "📚", label: "Kho sách", value: "50.000+" },
@@ -190,7 +191,7 @@ export default function Auth() {
                     <h2>ĐIỆN TỬ UTH</h2>
                 </div>
 
-                <p>
+                <p style={{ textAlign:'left' }}>
                     Hệ thống mượn và quản lý sách trực tuyến dành cho sinh viên
                     và giảng viên UTH.
                 </p>
@@ -365,6 +366,7 @@ export default function Auth() {
                             value={password}
                             onChange={(e) =>
                                 setPassword(e.target.value)
+                                
                             }
                         />
                     </div>
